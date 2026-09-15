@@ -1,0 +1,529 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<title>Lead Performance Dashboard</title>
+<style>
+:root{
+  color-scheme: light;
+  --page:#faf9fc; --surface:#ffffff; --surface-2:#f4effb;
+  --text-primary:#1e1230; --text-secondary:#5b4d72; --text-muted:#8b7fa0;
+  --grid:#e9e0f7; --axis:#cbb8ea; --border:rgba(76,29,149,0.14);
+  --accent:#7c3aed; --accent-strong:#5b21b6; --accent-soft:#ede9fe;
+  --ink-on-color:#2a2140;
+  --good:#a7e3c8; --good-bg:#eafaf1; --warn:#ffe29a; --warn-bg:#fff8e6; --crit:#f6a9b8; --crit-bg:#fdeef1;
+  --r1:#b7b9f5; --r2:#a9def0; --r3:#fbcba0; --r4:#a6e8db; --r5:#ddbef5; --r6:#d2d8e0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page:#150f22; --surface:#1e1730; --surface-2:#261c3e;
+    --text-primary:#f6f1ff; --text-secondary:#cdbfe6; --text-muted:#9683b8;
+    --grid:#33244f; --axis:#4b3572; --border:rgba(196,181,253,0.16);
+    --accent:#a78bfa; --accent-strong:#c4b5fd; --accent-soft:#2b1f49;
+    --good:#7fe0b0; --good-bg:#12301f; --warn:#ffd873; --warn-bg:#332707; --crit:#ff9fb3; --crit-bg:#3a1622;
+    --r1:#c3c6fa; --r2:#bdebfb; --r3:#fdd9b5; --r4:#bef0e4; --r5:#e9d3fa; --r6:#e2e6eb;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page:#150f22; --surface:#1e1730; --surface-2:#261c3e;
+  --text-primary:#f6f1ff; --text-secondary:#cdbfe6; --text-muted:#9683b8;
+  --grid:#33244f; --axis:#4b3572; --border:rgba(196,181,253,0.16);
+  --accent:#a78bfa; --accent-strong:#c4b5fd; --accent-soft:#2b1f49;
+  --good:#7fe0b0; --good-bg:#12301f; --warn:#ffd873; --warn-bg:#332707; --crit:#ff9fb3; --crit-bg:#3a1622;
+  --r1:#c3c6fa; --r2:#bdebfb; --r3:#fdd9b5; --r4:#bef0e4; --r5:#e9d3fa; --r6:#e2e6eb;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--page);color:var(--text-primary);font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14.5px;line-height:1.4;}
+.wrap{max-width:1440px;margin:0 auto;padding:0 24px 80px;}
+h1,h2,h3{font-family:"Libre Franklin",system-ui,sans-serif;margin:0;text-wrap:balance;}
+header.hero{padding:34px 0 20px;border-bottom:1px solid var(--border);margin-bottom:22px;}
+.eyebrow{font-family:"Libre Franklin",system-ui,sans-serif;font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 6px;}
+h1{font-size:28px;font-weight:800;letter-spacing:-.01em;}
+.headline{font-size:19px;font-weight:600;line-height:1.35;color:var(--text-primary);margin:0 0 16px;max-width:980px;}
+.headline b{color:var(--accent-strong);}
+section{margin-top:44px;}
+.section-head{display:flex;align-items:baseline;gap:10px;margin-bottom:6px;}
+.section-num{font-family:"Libre Franklin",system-ui,sans-serif;font-size:11px;font-weight:800;color:var(--accent);letter-spacing:.06em;}
+h2{font-size:18px;font-weight:800;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;}
+.card h3{font-size:12.5px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.03em;margin:0 0 10px;}
+
+/* At-a-glance summary cards */
+.mtd-caption{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:8px;}
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.summary-card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:12px;padding:14px 16px;}
+.summary-card.good{border-left-color:var(--good);}
+.summary-card.warn{border-left-color:var(--warn);}
+.summary-card.crit{border-left-color:var(--crit);}
+.sc-label{display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:6px;}
+.sc-value{font-family:"Libre Franklin",system-ui,sans-serif;font-size:26px;font-weight:800;color:var(--text-primary);}
+.sc-value small{font-size:13px;font-weight:700;color:var(--text-muted);margin-left:6px;}
+
+.chart-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.chart-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.chart-box{position:relative;}
+.chart-box canvas{max-width:100%;}
+
+/* Insight chips */
+.chip-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px;}
+.chip{background:var(--accent-soft);border:1px solid var(--border);border-radius:999px;padding:10px 18px;display:flex;gap:9px;align-items:baseline;font-size:15px;}
+.chip-k{font-weight:800;color:var(--accent-strong);text-transform:uppercase;font-size:13px;letter-spacing:.03em;white-space:nowrap;}
+.chip-v{color:var(--text-primary);font-weight:600;white-space:nowrap;}
+
+/* Funnel blocks (Section 2): one source name + 3 full-size charts per block
+   (Total Leads / Leads % / Total Fleet Size — Disqualify Reasons lives only
+   in the Monthly Overview section) */
+.funnel-block{margin-top:28px;}
+.funnel-block:first-of-type{margin-top:4px;}
+.funnel-head{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+.funnel-name{font-size:15px;font-weight:800;}
+.funnel-vol{font-size:11.5px;color:var(--text-muted);white-space:nowrap;}
+
+@media (max-width:1100px){
+  .chart-grid-4{grid-template-columns:repeat(2,1fr);}
+  .chart-grid-3{grid-template-columns:repeat(3,1fr);}
+}
+@media (max-width:900px){
+  .summary-grid{grid-template-columns:repeat(2,1fr);}
+  .chart-grid-3{grid-template-columns:repeat(2,1fr);}
+}
+@media (max-width:640px){
+  .chart-grid-4{grid-template-columns:1fr;}
+  .chart-grid-3{grid-template-columns:1fr;}
+}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<div class="wrap">
+
+<header class="hero">
+  <p class="eyebrow">Commercial &middot; Lead Performance</p>
+  <h1>Lead Performance Dashboard</h1>
+</header>
+
+<p class="headline">Octane generated 3,011 leads across the window, but only 29% qualified &mdash; 66% were disqualified and 5% are still pending.</p>
+<div class="mtd-caption">At a glance &middot; month-to-date (Sep 1&ndash;14, 2026)</div>
+<div class="summary-grid">
+  <div class="summary-card">
+    <span class="sc-label">Total leads</span>
+    <span class="sc-value">585</span>
+  </div>
+  <div class="summary-card good">
+    <span class="sc-label">Qualified</span>
+    <span class="sc-value">192<small>33%</small></span>
+  </div>
+  <div class="summary-card warn">
+    <span class="sc-label">Pending</span>
+    <span class="sc-value">56<small>10%</small></span>
+  </div>
+  <div class="summary-card crit">
+    <span class="sc-label">Disqualified</span>
+    <span class="sc-value">337<small>58%</small></span>
+  </div>
+</div>
+
+<section id="overview">
+  <div class="section-head"><span class="section-num">01</span><h2>Monthly Overview</h2></div>
+  <p class="headline">Fleet size looked strongest in Aug at 210,196 &mdash; but 96% of that fleet came from leads that were ultimately disqualified.</p>
+
+  <div class="chart-grid-4">
+    <div class="card">
+      <h3>Total Leads</h3>
+      <div class="chart-box"><canvas id="ovTotal" height="320"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Leads %</h3>
+      <div class="chart-box"><canvas id="ovPct" height="320"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Disqualify Reasons</h3>
+      <div class="chart-box"><canvas id="ovReasons" height="320"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Total Fleet Size</h3>
+      <div class="chart-box"><canvas id="ovFleet" height="320"></canvas></div>
+    </div>
+</div>
+</section>
+
+<section id="sources">
+  <div class="section-head"><span class="section-num">02</span><h2>Lead Source Performance</h2></div>
+
+  <div class="chip-row">
+    <div class="chip"><span class="chip-k">Most leads</span><span class="chip-v">Social Media &middot; 2,143 leads (71% of all leads)</span></div>
+<div class="chip"><span class="chip-k">Best qualification rate</span><span class="chip-v">Liveops Sheet &middot; 82% qualified</span></div>
+<div class="chip"><span class="chip-k">Highest disqualification rate</span><span class="chip-v">On-Ground SDV &middot; 77% disqualified</span></div>
+<div class="chip"><span class="chip-k">Top disqualify reason</span><span class="chip-v">Not interested &middot; 81% of these 3 sources&rsquo; disqualifications</span></div>
+  </div>
+
+  
+  <div class="funnel-block">
+    <div class="funnel-head">
+      <h3 class="funnel-name">Social Media</h3>
+      <span class="funnel-vol">2,143 leads &middot; 71% of total &middot; 27% qualified</span>
+    </div>
+    <div class="chart-grid-3">
+    <div class="card">
+      <h3>Total Leads</h3>
+      <div class="chart-box"><canvas id="fn0Total" height="320"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Leads %</h3>
+      <div class="chart-box"><canvas id="fn0Pct" height="320"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Total Fleet Size</h3>
+      <div class="chart-box"><canvas id="fn0Fleet" height="320"></canvas></div>
+    </div>
+</div>
+  </div>
+
+  <div class="funnel-block">
+    <div class="funnel-head">
+      <h3 class="funnel-name">On-Ground SDV</h3>
+      <span class="funnel-vol">301 leads &middot; 10% of total &middot; 18% qualified</span>
+    </div>
+    <div class="chart-grid-3">
+    <div class="card">
+      <h3>Total Leads</h3>
+      <div class="chart-box"><canvas id="fn1Total" height="320"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Leads %</h3>
+      <div class="chart-box"><canvas id="fn1Pct" height="320"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Total Fleet Size</h3>
+      <div class="chart-box"><canvas id="fn1Fleet" height="320"></canvas></div>
+    </div>
+</div>
+  </div>
+
+  <div class="funnel-block">
+    <div class="funnel-head">
+      <h3 class="funnel-name">Liveops Sheet</h3>
+      <span class="funnel-vol">144 leads &middot; 5% of total &middot; 82% qualified</span>
+    </div>
+    <div class="chart-grid-3">
+    <div class="card">
+      <h3>Total Leads</h3>
+      <div class="chart-box"><canvas id="fn2Total" height="320"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Leads %</h3>
+      <div class="chart-box"><canvas id="fn2Pct" height="320"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Total Fleet Size</h3>
+      <div class="chart-box"><canvas id="fn2Fleet" height="320"></canvas></div>
+    </div>
+</div>
+  </div>
+
+  <div class="funnel-block">
+    <div class="funnel-head">
+      <h3 class="funnel-name">Other Sources</h3>
+      <span class="funnel-vol">423 leads &middot; 14% of total &middot; 31% qualified</span>
+    </div>
+    <div class="chart-grid-3">
+    <div class="card">
+      <h3>Total Leads</h3>
+      <div class="chart-box"><canvas id="fn3Total" height="320"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Leads %</h3>
+      <div class="chart-box"><canvas id="fn3Pct" height="320"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Total Fleet Size</h3>
+      <div class="chart-box"><canvas id="fn3Fleet" height="320"></canvas></div>
+    </div>
+</div>
+  </div>
+</section>
+
+</div>
+
+<script>
+  // Prevent a chart-library load hiccup from surfacing as a blank page or a
+  // console alarm the user can't act on — log it, keep the rest of the page usable.
+  window.addEventListener('error', function(e) {
+    if (e && e.message) console.warn('Non-fatal script load issue:', e.message, e.filename || '');
+  }, true);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" crossorigin="anonymous" onerror="window.__chartLoadFailed=true"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js" crossorigin="anonymous" onerror="window.__datalabelsLoadFailed=true"></script>
+<script>
+const DATA = {"overall": {"months": ["Jul", "Aug", "Sep"], "leads": {"months": ["Jul", "Aug", "Sep"], "totals": [689, 1737, 585], "qualified": [233, 461, 192], "pending": [42, 53, 56], "disqualified": [414, 1223, 337], "qualified_pct": [34, 27, 33], "pending_pct": [6, 3, 10], "disqualified_pct": [60, 70, 58]}, "reasons": {"totals": [414, 1223, 337], "series": [{"reason": "Not interested", "counts": [299, 1084, 210], "pcts": [72, 89, 62]}, {"reason": "No fleet", "counts": [36, 78, 99], "pcts": [9, 6, 29]}, {"reason": "Invalid / wrong number", "counts": [30, 43, 22], "pcts": [7, 4, 7]}, {"reason": "Already with competitor", "counts": [20, 17, 1], "pcts": [5, 1, 0]}, {"reason": "Other", "counts": [15, 1, 4], "pcts": [4, 0, 1]}, {"reason": "Not the decision maker", "counts": [14, 0, 1], "pcts": [3, 0, 0]}]}, "fleet": {"totals": [3842, 210196, 3488], "qualified": [2623, 8930, 2402], "pending": [8, 0, 555], "disqualified": [1211, 201266, 531], "qualified_pct": [68, 4, 69], "pending_pct": [0, 0, 16], "disqualified_pct": [32, 96, 15]}}, "funnel": {"social_media": {"months": ["Jul", "Aug", "Sep"], "leads": {"totals": [629, 1309, 205], "qualified": [195, 313, 75], "pending": [41, 49, 21], "disqualified": [393, 947, 109], "qualified_pct": [31, 24, 37], "pending_pct": [7, 4, 10], "disqualified_pct": [62, 72, 53]}, "reasons": {"totals": [393, 947, 109], "series": [{"reason": "Not interested", "counts": [285, 835, 71], "pcts": [73, 88, 65]}, {"reason": "No fleet", "counts": [36, 65, 33], "pcts": [9, 7, 30]}, {"reason": "Invalid / wrong number", "counts": [29, 34, 4], "pcts": [7, 4, 4]}, {"reason": "Already with competitor", "counts": [20, 12, 0], "pcts": [5, 1, 0]}, {"reason": "Other", "counts": [12, 1, 1], "pcts": [3, 0, 1]}, {"reason": "Not the decision maker", "counts": [11, 0, 0], "pcts": [3, 0, 0]}]}, "fleet": {"totals": [3038, 5596, 602], "qualified": [1910, 5539, 602], "pending": [5, 0, 0], "disqualified": [1123, 57, 0], "qualified_pct": [63, 99, 100], "pending_pct": [0, 0, 0], "disqualified_pct": [37, 1, 0]}}, "on_ground_sdv": {"months": ["Jul", "Aug", "Sep"], "leads": {"totals": [0, 81, 220], "qualified": [0, 10, 44], "pending": [0, 2, 13], "disqualified": [0, 69, 163], "qualified_pct": [0, 12, 20], "pending_pct": [0, 2, 6], "disqualified_pct": [0, 85, 74]}, "reasons": {"totals": [0, 69, 163], "series": [{"reason": "Not interested", "counts": [0, 63, 110], "pcts": [0, 91, 67]}, {"reason": "No fleet", "counts": [0, 1, 37], "pcts": [0, 1, 23]}, {"reason": "Invalid / wrong number", "counts": [0, 2, 11], "pcts": [0, 3, 7]}, {"reason": "Already with competitor", "counts": [0, 3, 1], "pcts": [0, 4, 1]}, {"reason": "Other", "counts": [0, 0, 3], "pcts": [0, 0, 2]}, {"reason": "Not the decision maker", "counts": [0, 0, 1], "pcts": [0, 0, 1]}]}, "fleet": {"totals": [0, 530, 1113], "qualified": [0, 179, 623], "pending": [0, 0, 95], "disqualified": [0, 351, 395], "qualified_pct": [0, 34, 56], "pending_pct": [0, 0, 9], "disqualified_pct": [0, 66, 35]}}, "liveops_sheet": {"months": ["Jul", "Aug", "Sep"], "leads": {"totals": [39, 71, 34], "qualified": [32, 56, 30], "pending": [0, 0, 0], "disqualified": [7, 15, 4], "qualified_pct": [82, 79, 88], "pending_pct": [0, 0, 0], "disqualified_pct": [18, 21, 12]}, "reasons": {"totals": [7, 15, 4], "series": [{"reason": "Not interested", "counts": [6, 15, 3], "pcts": [86, 100, 75]}, {"reason": "No fleet", "counts": [0, 0, 1], "pcts": [0, 0, 25]}, {"reason": "Invalid / wrong number", "counts": [0, 0, 0], "pcts": [0, 0, 0]}, {"reason": "Already with competitor", "counts": [0, 0, 0], "pcts": [0, 0, 0]}, {"reason": "Other", "counts": [1, 0, 0], "pcts": [14, 0, 0]}, {"reason": "Not the decision maker", "counts": [0, 0, 0], "pcts": [0, 0, 0]}]}, "fleet": {"totals": [662, 788, 440], "qualified": [617, 692, 424], "pending": [0, 0, 0], "disqualified": [45, 96, 16], "qualified_pct": [93, 88, 96], "pending_pct": [0, 0, 0], "disqualified_pct": [7, 12, 4]}}, "others_combined": {"months": ["Jul", "Aug", "Sep"], "leads": {"totals": [21, 276, 126], "qualified": [6, 82, 43], "pending": [1, 2, 22], "disqualified": [14, 192, 61], "qualified_pct": [29, 30, 34], "pending_pct": [5, 1, 17], "disqualified_pct": [67, 70, 48]}, "reasons": {"totals": [0, 0, 0], "series": []}, "fleet": {"totals": [142, 203282, 1333], "qualified": [96, 2520, 753], "pending": [3, 0, 460], "disqualified": [43, 200762, 120], "qualified_pct": [68, 1, 56], "pending_pct": [2, 0, 35], "disqualified_pct": [30, 99, 9]}}}};
+const FUNNEL_KEYS = ["social_media", "on_ground_sdv", "liveops_sheet", "others_combined"];
+</script>
+<script>
+(function(){
+  function isDark(){
+    var el = document.documentElement;
+    if (el.getAttribute('data-theme') === 'dark') return true;
+    if (el.getAttribute('data-theme') === 'light') return false;
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  // Custom plugin: draws the column total in bold above each stacked bar.
+  var stackTotalPlugin = {
+    id: 'stackTotal',
+    afterDatasetsDraw: function(chart, args, opts) {
+      if (!opts || !opts.totals) return;
+      var ctx = chart.ctx;
+      var meta0 = chart.getDatasetMeta(0);
+      if (!meta0 || !meta0.data.length) return;
+      ctx.save();
+      ctx.font = (opts.font || '800 14px "Libre Franklin", system-ui, sans-serif');
+      ctx.fillStyle = opts.color || '#1e1230';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      chart.data.labels.forEach(function(lab, i) {
+        var minY = Infinity;
+        chart.data.datasets.forEach(function(ds, dsIndex) {
+          var m = chart.getDatasetMeta(dsIndex);
+          if (m.hidden) return;
+          var el = m.data[i];
+          if (el) minY = Math.min(minY, el.y);
+        });
+        if (minY === Infinity) return;
+        var total = opts.totals[i];
+        if (total == null) return;
+        ctx.fillText(total.toLocaleString(), meta0.data[i].x, minY - (opts.offset || 6));
+      });
+      ctx.restore();
+    }
+  };
+
+  function boot(){
+    var ink = cssVar('--text-secondary');
+    var grid = cssVar('--grid');
+    var good = cssVar('--good'), warn = cssVar('--warn'), crit = cssVar('--crit');
+    var surface = cssVar('--surface');
+    var textPrimary = cssVar('--text-primary');
+    var inkOnColor = cssVar('--ink-on-color');
+    var rcolors = [cssVar('--r1'), cssVar('--r2'), cssVar('--r3'), cssVar('--r4'), cssVar('--r5'), cssVar('--r6')];
+
+    Chart.register(stackTotalPlugin);
+    if (window.ChartDataLabels) Chart.register(window.ChartDataLabels);
+
+    Chart.defaults.font.family = "IBM Plex Sans, system-ui, -apple-system, sans-serif";
+    Chart.defaults.color = ink;
+    Chart.defaults.borderColor = grid;
+
+    var tooltipBase = {
+      backgroundColor: surface, titleColor: textPrimary, bodyColor: ink,
+      borderColor: cssVar('--border'), borderWidth: 1, padding: 10, cornerRadius: 8,
+      titleFont: {weight: '700'}, displayColors: true,
+      mode: 'index', intersect: false,
+    };
+
+    // Decide label detail from the segment's ACTUAL rendered pixel height
+    // (not just its share%), so a thin segment in a short bar never overlaps.
+    function pxHeight(ctx, value) {
+      var scale = ctx.chart.scales.y;
+      if (!scale) return 999;
+      var p0 = scale.getPixelForValue(0);
+      var p1 = scale.getPixelForValue(value);
+      return Math.abs(p0 - p1);
+    }
+    function segFormatter(count, sharePct, ctx) {
+      var h = pxHeight(ctx, count);
+      if (h >= 28) return count.toLocaleString() + '\n' + sharePct + '%';
+      if (h >= 13) return sharePct + '%';
+      return '';
+    }
+    function pctFormatter(sharePct, ctx) {
+      var h = pxHeight(ctx, sharePct);
+      return h >= 13 ? sharePct + '%' : '';
+    }
+
+    var baseBarOpts = {
+      responsive: true, maintainAspectRatio: false, layout: {padding: {top: 22}},
+      interaction: {mode: 'index', intersect: false},
+      scales: {
+        x: {stacked: true, grid: {display: false}},
+        y: {stacked: true, grid: {color: grid}, ticks: {precision: 0}, display: false},
+      },
+      plugins: {
+        legend: {position: 'bottom', labels: {boxWidth: 10, boxHeight: 10, usePointStyle: true, pointStyle: 'circle'}},
+        datalabels: {color: inkOnColor, font: {weight: '700', size: 10}, textAlign: 'center'},
+      }
+    };
+
+    // One reusable builder — draws all 4 reference-style charts (Total Leads /
+    // Leads % / Disqualify Reasons / Total Fleet Size) for either the overall
+    // window or a single source, given canvas ids "{prefix}Total" etc.
+    function buildChartSet(prefix, data) {
+      var months = data.months;
+
+      // Total Leads — stacked counts, total above, count+% per segment
+      var elTotal = document.getElementById(prefix + 'Total');
+      if (elTotal) {
+        new Chart(elTotal, {
+          type: 'bar',
+          data: {
+            labels: months,
+            datasets: [
+              {label: 'Disqualified', data: data.leads.disqualified, backgroundColor: crit, borderRadius: 4,
+                datalabels: {formatter: (v, ctx) => segFormatter(v, data.leads.disqualified_pct[ctx.dataIndex], ctx)}},
+              {label: 'Pending', data: data.leads.pending, backgroundColor: warn, borderRadius: 4,
+                datalabels: {formatter: (v, ctx) => segFormatter(v, data.leads.pending_pct[ctx.dataIndex], ctx)}},
+              {label: 'Qualified', data: data.leads.qualified, backgroundColor: good, borderRadius: 4,
+                datalabels: {formatter: (v, ctx) => segFormatter(v, data.leads.qualified_pct[ctx.dataIndex], ctx)}},
+            ]
+          },
+          options: Object.assign({}, baseBarOpts, {
+            plugins: Object.assign({}, baseBarOpts.plugins, {
+              stackTotal: {totals: data.leads.totals, color: textPrimary},
+              tooltip: Object.assign({}, tooltipBase, {
+                callbacks: { label: function(ctx) {
+                  var i = ctx.dataIndex;
+                  var p = ctx.dataset.label === 'Qualified' ? data.leads.qualified_pct[i] : ctx.dataset.label === 'Pending' ? data.leads.pending_pct[i] : data.leads.disqualified_pct[i];
+                  return ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString() + ' (' + p + '%)';
+                } }
+              })
+            })
+          })
+        });
+      }
+
+      // Leads % — horizontal grouped bars, one per status per month, % at bar end
+      var elPct = document.getElementById(prefix + 'Pct');
+      if (elPct) {
+        new Chart(elPct, {
+          type: 'bar',
+          data: {
+            labels: months,
+            datasets: [
+              {label: 'Qualified', data: data.leads.qualified_pct, backgroundColor: good, borderRadius: 4},
+              {label: 'Pending', data: data.leads.pending_pct, backgroundColor: warn, borderRadius: 4},
+              {label: 'Disqualified', data: data.leads.disqualified_pct, backgroundColor: crit, borderRadius: 4},
+            ]
+          },
+          options: {
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            layout: {padding: {right: 32, top: 6, bottom: 6}},
+            interaction: {mode: 'index', intersect: false},
+            scales: {
+              x: {min: 0, max: 100, grid: {color: grid}, ticks: {stepSize: 25, callback: function(v) { return v + '%'; }}},
+              y: {grid: {display: false}},
+            },
+            plugins: {
+              legend: {position: 'bottom', labels: {boxWidth: 10, boxHeight: 10, usePointStyle: true, pointStyle: 'circle'}},
+              datalabels: {
+                color: textPrimary, anchor: 'end', align: 'end', clip: false,
+                font: {weight: '700', size: 10.5}, formatter: function(v) { return v + '%'; }
+              },
+              tooltip: Object.assign({}, tooltipBase, {
+                callbacks: { label: function(ctx) {
+                  var i = ctx.dataIndex;
+                  var n = ctx.dataset.label === 'Qualified' ? data.leads.qualified[i] : ctx.dataset.label === 'Pending' ? data.leads.pending[i] : data.leads.disqualified[i];
+                  return ctx.dataset.label + ': ' + ctx.parsed.x + '% (' + n.toLocaleString() + ')';
+                } }
+              })
+            }
+          }
+        });
+      }
+
+      // Disqualify Reasons — 100%-height stacked, % per segment, raw total above
+      var elReasons = document.getElementById(prefix + 'Reasons');
+      if (elReasons) {
+        new Chart(elReasons, {
+          type: 'bar',
+          data: {
+            labels: months,
+            datasets: data.reasons.series.map(function(s, i) {
+              return {
+                label: s.reason, data: s.pcts, backgroundColor: rcolors[i % rcolors.length], borderRadius: 4,
+                datalabels: {formatter: (v, ctx) => pctFormatter(v, ctx)}
+              };
+            })
+          },
+          options: Object.assign({}, baseBarOpts, {
+            scales: Object.assign({}, baseBarOpts.scales, { y: Object.assign({}, baseBarOpts.scales.y, {max: 100}) }),
+            plugins: Object.assign({}, baseBarOpts.plugins, {
+              legend: {position: 'bottom', labels: {boxWidth: 9, boxHeight: 9, usePointStyle: true, pointStyle: 'circle', font: {size: 10.5}}},
+              stackTotal: {totals: data.reasons.totals, color: textPrimary},
+              tooltip: Object.assign({}, tooltipBase, {
+                callbacks: { label: function(ctx) {
+                  var s = data.reasons.series[ctx.datasetIndex];
+                  return s.reason + ': ' + ctx.parsed.y + '% (' + s.counts[ctx.dataIndex].toLocaleString() + ')';
+                } }
+              })
+            })
+          })
+        });
+      }
+
+      // Total Fleet Size — stacked raw counts, total above, count+% per segment
+      var elFleet = document.getElementById(prefix + 'Fleet');
+      if (elFleet) {
+        new Chart(elFleet, {
+          type: 'bar',
+          data: {
+            labels: months,
+            datasets: [
+              {label: 'Disqualified', data: data.fleet.disqualified, backgroundColor: crit, borderRadius: 4,
+                datalabels: {formatter: (v, ctx) => segFormatter(v, data.fleet.disqualified_pct[ctx.dataIndex], ctx)}},
+              {label: 'Pending', data: data.fleet.pending, backgroundColor: warn, borderRadius: 4,
+                datalabels: {formatter: (v, ctx) => segFormatter(v, data.fleet.pending_pct[ctx.dataIndex], ctx)}},
+              {label: 'Qualified', data: data.fleet.qualified, backgroundColor: good, borderRadius: 4,
+                datalabels: {formatter: (v, ctx) => segFormatter(v, data.fleet.qualified_pct[ctx.dataIndex], ctx)}},
+            ]
+          },
+          options: Object.assign({}, baseBarOpts, {
+            plugins: Object.assign({}, baseBarOpts.plugins, {
+              stackTotal: {totals: data.fleet.totals, color: textPrimary},
+              tooltip: Object.assign({}, tooltipBase, {
+                callbacks: { label: function(ctx) {
+                  var i = ctx.dataIndex;
+                  var p = ctx.dataset.label === 'Qualified' ? data.fleet.qualified_pct[i] : ctx.dataset.label === 'Pending' ? data.fleet.pending_pct[i] : data.fleet.disqualified_pct[i];
+                  return ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString() + ' (' + p + '%)';
+                } }
+              })
+            })
+          })
+        });
+      }
+    }
+
+    // Section 1 (overall) + the 3 named Section 2 sources + the combined
+    // "Other Sources" row — same chart-building function for all of them.
+    buildChartSet('ov', DATA.overall);
+    FUNNEL_KEYS.forEach(function(key, i) {
+      var d = DATA.funnel[key];
+      if (d) buildChartSet('fn' + i, d);
+    });
+  }
+
+  function showLoadError(msg) {
+    document.querySelectorAll('.chart-box').forEach(function(box) {
+      box.innerHTML = '<div style="padding:24px 8px;text-align:center;color:var(--text-muted);font-size:11.5px;">' + msg + '</div>';
+    });
+  }
+
+  try {
+    if (!window.Chart) {
+      showLoadError('Chart library failed to load — check your internet connection and reload.');
+    } else {
+      boot();
+    }
+  } catch (err) {
+    console.error('Dashboard chart init failed:', err);
+    showLoadError('Something went wrong rendering the charts — see the browser console for details.');
+  }
+})();
+</script>
+
+</body>
+</html>
